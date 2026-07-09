@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "firebase:deploy": "npx firebase-tools deploy --only firestore:rules,firestore:indexes",
+    "firebase:emulators": "npx firebase-tools emulators:start --only firestore"
   },
   "dependencies": {
     "firebase": "^12.15.0",

@@ -1,0 +1,284 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function currentUserProfile() {
+      return get(userDoc(request.auth.uid));
+    }
+
+    function hasCurrentUserProfile() {
+      return isSignedIn() && exists(userDoc(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return hasCurrentUserProfile() && currentUserProfile().data.role == "admin";
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedKeys(allowedKeys) {
+      return request.resource.data.keys().hasOnly(allowedKeys);
+    }
+
+    function hasRequiredKeys(requiredKeys) {
+      return request.resource.data.keys().hasAll(requiredKeys);
+    }
+
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function isOptionalString(value) {
+      return value == null || value is string;
+    }
+
+    function hasValidTimestampsOnCreate() {
+      return request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function hasValidUpdatedAt() {
+      return request.resource.data.updatedAt == request.time;
+    }
+
+    function isValidUserRole(role) {
+      return role in ["user", "admin"];
+    }
+
+    function isValidUserProfileCreate(userId) {
+      return hasOnlyAllowedKeys([
+          "id",
+          "name",
+          "email",
+          "avatarUrl",
+          "role",
+          "createdAt",
+          "updatedAt"
+        ])
+        && hasRequiredKeys(["id", "name", "email", "role", "createdAt", "updatedAt"])
+        && request.resource.data.id == userId
+        && isNonEmptyString(request.resource.data.name)
+        && isNonEmptyString(request.resource.data.email)
+        && isOptionalString(request.resource.data.avatarUrl)
+        && isValidUserRole(request.resource.data.role)
+        && hasValidTimestampsOnCreate();
+    }
+
+    function isOwnUserProfileCreate(userId) {
+      return isSelf(userId)
+        && isValidUserProfileCreate(userId)
+        && request.resource.data.role == "user";
+    }
+
+    function isValidOwnUserProfileUpdate() {
+      return hasOnlyAllowedKeys([
+          "id",
+          "name",
+          "email",
+          "avatarUrl",
+          "role",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.createdAt == resource.data.createdAt
+        && isNonEmptyString(request.resource.data.name)
+        && isNonEmptyString(request.resource.data.email)
+        && isOptionalString(request.resource.data.avatarUrl)
+        && hasValidUpdatedAt();
+    }
+
+    function isValidAdminUserProfileUpdate() {
+      return hasOnlyAllowedKeys([
+          "id",
+          "name",
+          "email",
+          "avatarUrl",
+          "role",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.createdAt == resource.data.createdAt
+        && isNonEmptyString(request.resource.data.name)
+        && isNonEmptyString(request.resource.data.email)
+        && isOptionalString(request.resource.data.avatarUrl)
+        && isValidUserRole(request.resource.data.role)
+        && hasValidUpdatedAt();
+    }
+
+    function isValidBookCreate() {
+      return hasOnlyAllowedKeys([
+          "id",
+          "ownerId",
+          "ownerName",
+          "ownerEmail",
+          "name",
+          "author",
+          "photoUrl",
+          "searchName",
+          "searchAuthor",
+          "createdAt",
+          "updatedAt"
+        ])
+        && hasRequiredKeys([
+          "id",
+          "ownerId",
+          "ownerName",
+          "ownerEmail",
+          "name",
+          "author",
+          "searchName",
+          "searchAuthor",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.id is string
+        && request.resource.data.ownerId == request.auth.uid
+        && isNonEmptyString(request.resource.data.ownerName)
+        && isNonEmptyString(request.resource.data.ownerEmail)
+        && isNonEmptyString(request.resource.data.name)
+        && isNonEmptyString(request.resource.data.author)
+        && isNonEmptyString(request.resource.data.searchName)
+        && isNonEmptyString(request.resource.data.searchAuthor)
+        && isOptionalString(request.resource.data.photoUrl)
+        && hasValidTimestampsOnCreate();
+    }
+
+    function isValidBookUpdate() {
+      return hasOnlyAllowedKeys([
+          "id",
+          "ownerId",
+          "ownerName",
+          "ownerEmail",
+          "name",
+          "author",
+          "photoUrl",
+          "searchName",
+          "searchAuthor",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.ownerName == resource.data.ownerName
+        && request.resource.data.ownerEmail == resource.data.ownerEmail
+        && request.resource.data.createdAt == resource.data.createdAt
+        && isNonEmptyString(request.resource.data.name)
+        && isNonEmptyString(request.resource.data.author)
+        && isNonEmptyString(request.resource.data.searchName)
+        && isNonEmptyString(request.resource.data.searchAuthor)
+        && isOptionalString(request.resource.data.photoUrl)
+        && hasValidUpdatedAt();
+    }
+
+    function targetBook(bookId) {
+      return get(/databases/$(database)/documents/books/$(bookId));
+    }
+
+    function exchangeRequesterOwnsRequest(requesterId) {
+      return isSignedIn() && request.auth.uid == requesterId;
+    }
+
+    function exchangeRecipientOwnsRequest(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    function isValidExchangeRequestCreate() {
+      let book = targetBook(request.resource.data.bookId);
+
+      return hasOnlyAllowedKeys([
+          "id",
+          "bookId",
+          "bookName",
+          "ownerId",
+          "ownerEmail",
+          "requesterId",
+          "requesterName",
+          "requesterEmail",
+          "requesterBookIds",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ])
+        && hasRequiredKeys([
+          "id",
+          "bookId",
+          "bookName",
+          "ownerId",
+          "ownerEmail",
+          "requesterId",
+          "requesterName",
+          "requesterEmail",
+          "requesterBookIds",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.id is string
+        && request.resource.data.bookId is string
+        && exists(/databases/$(database)/documents/books/$(request.resource.data.bookId))
+        && request.resource.data.ownerId == book.data.ownerId
+        && request.resource.data.ownerEmail == book.data.ownerEmail
+        && request.resource.data.bookName == book.data.name
+        && request.resource.data.ownerId != request.auth.uid
+        && request.resource.data.requesterId == request.auth.uid
+        && isNonEmptyString(request.resource.data.requesterName)
+        && isNonEmptyString(request.resource.data.requesterEmail)
+        && request.resource.data.requesterBookIds is list
+        && request.resource.data.requesterBookIds.size() > 0
+        && request.resource.data.status == "pending"
+        && hasValidTimestampsOnCreate();
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwnUserProfileCreate(userId)
+        || (isAdmin() && isValidUserProfileCreate(userId));
+      allow update: if (isSelf(userId) && isValidOwnUserProfileUpdate())
+        || (isAdmin() && isValidAdminUserProfileUpdate());
+      allow delete: if isAdmin() && !isSelf(userId);
+    }
+
+    match /books/{bookId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.id == bookId
+        && isValidBookCreate();
+      allow update: if isSignedIn()
+        && resource.data.ownerId == request.auth.uid
+        && isValidBookUpdate();
+      allow delete: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /exchangeRequests/{requestId} {
+      allow read: if isSignedIn()
+        && (
+          exchangeRequesterOwnsRequest(resource.data.requesterId)
+          || exchangeRecipientOwnsRequest(resource.data.ownerId)
+          || isAdmin()
+        );
+      allow create: if isSignedIn()
+        && request.resource.data.id == requestId
+        && isValidExchangeRequestCreate();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
