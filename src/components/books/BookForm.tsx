@@ -62,7 +62,7 @@ export function BookForm({
             id="bookAuthor"
             value={form.author}
             onChange={onFieldChange("author")}
-            placeholder="Mikhail Bulgakov"
+            placeholder="Taras Shevchenko"
           />
         </Field>
 
