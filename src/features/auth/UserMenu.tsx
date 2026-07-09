@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -58,9 +59,13 @@ export function UserMenu() {
           )}
         </span>
         <span className="max-w-32 truncate">{displayName}</span>
-        <span
-          className="h-2 w-2 rotate-45 border-b border-r border-current"
+        <ChevronDown
           aria-hidden="true"
+          className={
+            isOpen
+              ? "size-4 shrink-0 rotate-180 transition-transform duration-200"
+              : "size-4 shrink-0 transition-transform duration-200"
+          }
         />
       </button>
 
