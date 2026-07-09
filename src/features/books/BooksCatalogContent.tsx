@@ -3,8 +3,17 @@
 import { Search } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { BookCard } from "@/components/books";
-import { Button, Field, Input, Label, SelectDropdown } from "@/components/ui";
+import {
+  Button,
+  ButtonLink,
+  Field,
+  Input,
+  Label,
+  SelectDropdown,
+} from "@/components/ui";
+import { useAuth } from "@/features/auth";
 import { useBooksCatalog } from "@/hooks";
+import { routes } from "@/lib/routes";
 import type { BookSearchField, BookSortOption } from "@/types";
 
 type CatalogPaginationProps = {
@@ -82,6 +91,32 @@ function CatalogPagination({
 }
 
 export function BooksCatalog() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="h-96 animate-pulse rounded-md border border-white/20 bg-zinc-950" />
+      </section>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="mx-auto flex w-full max-w-3xl flex-col items-center gap-5 px-4 py-20 text-center text-white">
+        <h1 className="font-serif text-4xl font-semibold">Book catalog</h1>
+        <p className="text-zinc-400">
+          Log in to search books and request exchanges.
+        </p>
+        <ButtonLink href={routes.login}>Log in</ButtonLink>
+      </main>
+    );
+  }
+
+  return <BooksCatalogContent />;
+}
+
+function BooksCatalogContent() {
   const {
     handleNextPage,
     handlePreviousPage,
