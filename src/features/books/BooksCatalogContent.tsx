@@ -1,27 +1,11 @@
 "use client";
 
-import type { DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
 import { Search } from "lucide-react";
-import type { ChangeEvent, FormEvent } from "react";
-import { useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
 import { BookCard } from "@/components/books";
 import { Button, Field, Input, Label, SelectDropdown } from "@/components/ui";
-import { DEFAULT_PAGE_SIZE } from "@/constants";
-import type {
-  Book,
-  BookSearchField,
-  BookSortOption,
-  BooksViewMode,
-} from "@/types";
-import { fetchBooks } from "./booksService";
-
-type BooksPageState = {
-  books: Book[];
-  isLoading: boolean;
-  error: string | null;
-  hasMore: boolean;
-  nextCursor: QueryDocumentSnapshot<DocumentData> | null;
-};
+import { useBooksCatalog } from "@/hooks";
+import type { BookSearchField, BookSortOption } from "@/types";
 
 type CatalogPaginationProps = {
   hasMore: boolean;
@@ -29,14 +13,6 @@ type CatalogPaginationProps = {
   page: number;
   onNextPage: () => void;
   onPreviousPage: () => void;
-};
-
-const initialBooksPageState: BooksPageState = {
-  books: [],
-  isLoading: true,
-  error: null,
-  hasMore: false,
-  nextCursor: null,
 };
 
 const searchFieldOptions: Array<{
@@ -106,116 +82,24 @@ function CatalogPagination({
 }
 
 export function BooksCatalog() {
-  const [searchDraft, setSearchDraft] = useState("");
-  const [searchFieldDraft, setSearchFieldDraft] =
-    useState<BookSearchField>("name");
-  const [appliedSearch, setAppliedSearch] = useState("");
-  const [appliedSearchField, setAppliedSearchField] =
-    useState<BookSearchField>("name");
-  const [sort, setSort] = useState<BookSortOption>("name-asc");
-  const [viewMode, setViewMode] = useState<BooksViewMode>("grid");
-  const [page, setPage] = useState(1);
-  const [pageCursors, setPageCursors] = useState<
-    Array<QueryDocumentSnapshot<DocumentData> | null>
-  >([null]);
-  const [pageState, setPageState] = useState<BooksPageState>(
-    initialBooksPageState,
-  );
-
-  const currentCursor = pageCursors[page - 1] ?? null;
-
-  useEffect(() => {
-    let isCurrentRequest = true;
-
-    async function loadBooks() {
-      setPageState((currentState) => ({
-        ...currentState,
-        isLoading: true,
-        error: null,
-      }));
-
-      try {
-        const result = await fetchBooks({
-          search: appliedSearch,
-          searchField: appliedSearchField,
-          sort,
-          pageSize: DEFAULT_PAGE_SIZE,
-          cursor: currentCursor,
-        });
-
-        if (!isCurrentRequest) {
-          return;
-        }
-
-        setPageState({
-          books: result.books,
-          isLoading: false,
-          error: null,
-          hasMore: result.hasMore,
-          nextCursor: result.nextCursor,
-        });
-      } catch {
-        if (!isCurrentRequest) {
-          return;
-        }
-
-        setPageState({
-          books: [],
-          isLoading: false,
-          error: "Could not load books. Please try again.",
-          hasMore: false,
-          nextCursor: null,
-        });
-      }
-    }
-
-    loadBooks();
-
-    return () => {
-      isCurrentRequest = false;
-    };
-  }, [appliedSearch, appliedSearchField, currentCursor, sort]);
-
-  function resetPagination() {
-    setPage(1);
-    setPageCursors([null]);
-  }
+  const {
+    handleNextPage,
+    handlePreviousPage,
+    handleSearchSubmit,
+    handleSortChange,
+    page,
+    pageState,
+    searchDraft,
+    searchFieldDraft,
+    setSearchDraft,
+    setSearchFieldDraft,
+    setViewMode,
+    sort,
+    viewMode,
+  } = useBooksCatalog();
 
   function handleSearchChange(event: ChangeEvent<HTMLInputElement>) {
     setSearchDraft(event.target.value);
-  }
-
-  function handleSearchFieldChange(nextSearchField: BookSearchField) {
-    setSearchFieldDraft(nextSearchField);
-  }
-
-  function handleSortChange(nextSort: BookSortOption) {
-    setSort(nextSort);
-    resetPagination();
-  }
-
-  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setAppliedSearch(searchDraft.trim());
-    setAppliedSearchField(searchFieldDraft);
-    resetPagination();
-  }
-
-  function handleNextPage() {
-    if (!pageState.nextCursor) {
-      return;
-    }
-
-    setPageCursors((currentCursors) => {
-      const nextCursors = currentCursors.slice(0, page);
-      nextCursors[page] = pageState.nextCursor;
-      return nextCursors;
-    });
-    setPage((currentPage) => currentPage + 1);
-  }
-
-  function handlePreviousPage() {
-    setPage((currentPage) => Math.max(1, currentPage - 1));
   }
 
   return (
@@ -249,7 +133,7 @@ export function BooksCatalog() {
             label="Search by"
             options={searchFieldOptions}
             value={searchFieldDraft}
-            onChange={handleSearchFieldChange}
+            onChange={setSearchFieldDraft}
           />
 
           <div className="flex items-end">

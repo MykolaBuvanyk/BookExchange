@@ -1,10 +1,10 @@
 "use client";
 
 import { ChevronDown, Send } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/features/auth";
-import { fetchMyBooks } from "@/features/books";
+import { useExchangeOfferBooks } from "@/hooks";
 import { cn } from "@/lib/utils";
 import type { Book } from "@/types";
 import {
@@ -18,38 +18,21 @@ type ExchangeRequestButtonProps = {
 
 export function ExchangeRequestButton({ book }: ExchangeRequestButtonProps) {
   const { profile, user } = useAuth();
-  const [requesterBooks, setRequesterBooks] = useState<Book[]>([]);
-  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
+  const {
+    books: requesterBooks,
+    error: booksError,
+    isLoading: isLoadingBooks,
+    loadBooks,
+    resetSelection,
+    selectedBookIds,
+    selectedBooks,
+    setError: setBooksError,
+    toggleBookSelection,
+  } = useExchangeOfferBooks(user?.uid);
   const [isOpen, setIsOpen] = useState(false);
-  const [hasLoadedBooks, setHasLoadedBooks] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const selectedBooks = useMemo(() => {
-    return requesterBooks.filter((requesterBook) =>
-      selectedBookIds.includes(requesterBook.id),
-    );
-  }, [requesterBooks, selectedBookIds]);
-
-  async function loadRequesterBooks() {
-    if (!user || hasLoadedBooks) {
-      return;
-    }
-
-    setIsLoadingBooks(true);
-
-    try {
-      const books = await fetchMyBooks(user.uid);
-      setRequesterBooks(books);
-      setHasLoadedBooks(true);
-    } catch {
-      setError("Could not load your books.");
-    } finally {
-      setIsLoadingBooks(false);
-    }
-  }
 
   async function handleToggleOpen() {
     if (!user || !profile) {
@@ -63,19 +46,10 @@ export function ExchangeRequestButton({ book }: ExchangeRequestButtonProps) {
     }
 
     setError(null);
+    setBooksError(null);
     setSuccessMessage(null);
     setIsOpen((currentValue) => !currentValue);
-    await loadRequesterBooks();
-  }
-
-  function handleBookSelection(bookId: string) {
-    setSelectedBookIds((currentIds) => {
-      if (currentIds.includes(bookId)) {
-        return currentIds.filter((currentId) => currentId !== bookId);
-      }
-
-      return [...currentIds, bookId];
-    });
+    await loadBooks();
   }
 
   async function handleRequestExchange() {
@@ -106,7 +80,7 @@ export function ExchangeRequestButton({ book }: ExchangeRequestButtonProps) {
         requesterBooks: selectedBooks,
       });
 
-      setSelectedBookIds([]);
+      resetSelection();
       setIsOpen(false);
       setSuccessMessage("Exchange request has been sent.");
     } catch (requestError) {
@@ -162,7 +136,7 @@ export function ExchangeRequestButton({ book }: ExchangeRequestButtonProps) {
                     <input
                       checked={isSelected}
                       className="mt-1 size-4 accent-black"
-                      onChange={() => handleBookSelection(requesterBook.id)}
+                      onChange={() => toggleBookSelection(requesterBook.id)}
                       type="checkbox"
                     />
                     <span className="min-w-0">
@@ -203,7 +177,9 @@ export function ExchangeRequestButton({ book }: ExchangeRequestButtonProps) {
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-red-300">{error}</p> : null}
+      {error || booksError ? (
+        <p className="text-sm text-red-300">{error || booksError}</p>
+      ) : null}
       {successMessage ? (
         <p className="text-sm text-emerald-300">{successMessage}</p>
       ) : null}

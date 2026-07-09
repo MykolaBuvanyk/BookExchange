@@ -1,4 +1,5 @@
 import { Trash2, UserRound } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui";
 import type { UserProfile } from "@/types";
 
@@ -55,10 +56,13 @@ export function AdminUsersList({
         >
           <div className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-sm border border-white/20 bg-zinc-950 font-serif text-xl text-zinc-400">
             {user.avatarUrl ? (
-              <img
+              <Image
                 src={user.avatarUrl}
                 alt={user.name}
                 className="size-full object-cover"
+                height={72}
+                unoptimized
+                width={72}
               />
             ) : (
               getInitials(user.name) || <UserRound size={20} />

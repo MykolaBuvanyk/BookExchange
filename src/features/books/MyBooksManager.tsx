@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BookForm,
   BookListItem,
@@ -12,6 +12,7 @@ import {
   MyBooksUnauthorizedState,
 } from "@/components/books";
 import { useAuth } from "@/features/auth";
+import { useMyBooks } from "@/hooks";
 import type {
   Book,
   BookFormValues,
@@ -23,7 +24,6 @@ import { readCompressedImage } from "@/utils/images/readCompressedImage";
 import {
   createBook,
   deleteBook,
-  fetchMyBooks,
   updateBook,
 } from "./booksService";
 
@@ -35,7 +35,12 @@ const emptyBookForm: BookFormValues = {
 
 export function MyBooksManager() {
   const { isAuthenticated, isLoading, profile } = useAuth();
-  const [books, setBooks] = useState<Book[]>([]);
+  const {
+    books,
+    isLoading: isBooksLoading,
+    refreshBooks,
+    setBooks,
+  } = useMyBooks(profile?.id);
   const [sort, setSort] = useState<MyBooksSortOption>("created-desc");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
@@ -45,39 +50,8 @@ export function MyBooksManager() {
   const [photoFileDataUrl, setPhotoFileDataUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isBooksLoading, setIsBooksLoading] = useState(false);
 
   const sortedBooks = useMemo(() => sortBooks(books, sort), [books, sort]);
-
-  useEffect(() => {
-    if (!profile) {
-      return;
-    }
-
-    let isCurrentRequest = true;
-
-    async function loadBooks() {
-      setIsBooksLoading(true);
-
-      try {
-        const userBooks = await fetchMyBooks(profile.id);
-
-        if (isCurrentRequest) {
-          setBooks(userBooks);
-        }
-      } finally {
-        if (isCurrentRequest) {
-          setIsBooksLoading(false);
-        }
-      }
-    }
-
-    loadBooks();
-
-    return () => {
-      isCurrentRequest = false;
-    };
-  }, [profile]);
 
   function resetForm() {
     setEditingBook(null);
@@ -144,15 +118,6 @@ export function MyBooksManager() {
         setPhotoFileName("");
         setError("Could not process the selected image.");
       });
-  }
-
-  async function refreshBooks() {
-    if (!profile) {
-      return;
-    }
-
-    const userBooks = await fetchMyBooks(profile.id);
-    setBooks(userBooks);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

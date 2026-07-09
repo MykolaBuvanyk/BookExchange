@@ -28,7 +28,6 @@ import type {
   BookSearchField,
   BookSortOption,
   CreateBookInput,
-  MyBooksSortOption,
   UpdateBookInput,
   UserProfile,
 } from "@/types";

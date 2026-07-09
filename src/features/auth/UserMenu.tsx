@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button, ButtonLink } from "@/components/ui";
@@ -44,10 +45,13 @@ export function UserMenu() {
       >
         <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-current text-xs">
           {profile?.avatarUrl ? (
-            <img
+            <Image
               src={profile.avatarUrl}
               alt={displayName}
               className="size-full object-cover"
+              height={24}
+              unoptimized
+              width={24}
             />
           ) : (
             getInitials(displayName)

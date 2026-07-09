@@ -2,7 +2,6 @@
 
 import { Plus, Search } from "lucide-react";
 import {
-  useEffect,
   useMemo,
   useState,
   type ChangeEvent,
@@ -17,13 +16,11 @@ import {
 } from "@/components/admin";
 import { Button, FieldError, Input } from "@/components/ui";
 import { useAuth } from "@/features/auth";
-import { deleteBook, fetchAllBooks } from "@/features/books";
-import type { Book, UserProfile, UserRole } from "@/types";
+import { useAdminData } from "@/hooks";
+import type { UserProfile, UserRole } from "@/types";
 import { sortBooks } from "@/utils/books/sortBooks";
 import {
   createManagedUserProfile,
-  deleteManagedUserProfile,
-  fetchAdminUsers,
   updateManagedUserProfile,
   type AdminUserFormValues,
 } from "./adminUsersService";
@@ -45,18 +42,25 @@ function getErrorMessage(error: unknown) {
 export function AdminPanel() {
   const { profile, isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("users");
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [books, setBooks] = useState<Book[]>([]);
-  const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [userForm, setUserForm] = useState<AdminUserFormValues>(emptyUserForm);
   const [userSearch, setUserSearch] = useState("");
   const [bookSearch, setBookSearch] = useState("");
-  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isAdmin = profile?.role === "admin";
+  const {
+    books,
+    error,
+    isLoading: isLoadingContent,
+    refreshUsers,
+    removeBook,
+    removeUser,
+    setError,
+    users,
+  } = useAdminData(isAdmin);
+
   const filteredUsers = useMemo(() => {
     const normalizedSearch = userSearch.trim().toLowerCase();
 
@@ -89,46 +93,6 @@ export function AdminPanel() {
     () => sortBooks(filteredBooks, "created-desc"),
     [filteredBooks],
   );
-
-  useEffect(() => {
-    if (!isAdmin) {
-      return;
-    }
-
-    let isCurrentRequest = true;
-
-    async function loadAdminData() {
-      setIsLoadingContent(true);
-
-      try {
-        const [loadedUsers, loadedBooks] = await Promise.all([
-          fetchAdminUsers(),
-          fetchAllBooks(),
-        ]);
-
-        if (!isCurrentRequest) {
-          return;
-        }
-
-        setUsers(loadedUsers);
-        setBooks(loadedBooks);
-      } catch (loadError) {
-        if (isCurrentRequest) {
-          setError(getErrorMessage(loadError));
-        }
-      } finally {
-        if (isCurrentRequest) {
-          setIsLoadingContent(false);
-        }
-      }
-    }
-
-    loadAdminData();
-
-    return () => {
-      isCurrentRequest = false;
-    };
-  }, [isAdmin]);
 
   function resetUserForm() {
     setEditingUser(null);
@@ -164,11 +128,6 @@ export function AdminPanel() {
         [field]: event.target.value,
       }));
     };
-  }
-
-  async function refreshUsers() {
-    const loadedUsers = await fetchAdminUsers();
-    setUsers(loadedUsers);
   }
 
   async function handleUserSubmit(event: FormEvent<HTMLFormElement>) {
@@ -210,10 +169,7 @@ export function AdminPanel() {
       return;
     }
 
-    await deleteManagedUserProfile(userId);
-    setUsers((currentUsers) =>
-      currentUsers.filter((user) => user.id !== userId),
-    );
+    await removeUser(userId);
   }
 
   async function handleDeleteBook(bookId: string) {
@@ -223,10 +179,7 @@ export function AdminPanel() {
       return;
     }
 
-    await deleteBook(bookId);
-    setBooks((currentBooks) =>
-      currentBooks.filter((book) => book.id !== bookId),
-    );
+    await removeBook(bookId);
   }
 
   if (isLoading) {

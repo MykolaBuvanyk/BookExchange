@@ -1,9 +1,9 @@
 "use client";
 
 import { BookOpen, Mail, Save, Upload, UserRound } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import {
-  useEffect,
   useMemo,
   useState,
   type ChangeEvent,
@@ -18,11 +18,7 @@ import {
   Label,
 } from "@/components/ui";
 import { useAuth } from "@/features/auth";
-import { fetchMyBooks } from "@/features/books";
-import {
-  fetchUserExchangeRequests,
-  updateExchangeRequestStatus,
-} from "@/features/exchange-requests";
+import { useExchangeRequests, useMyBooks } from "@/hooks";
 import { routes } from "@/lib/routes";
 import type { ExchangeRequest } from "@/types";
 import { readCompressedImage } from "@/utils/images/readCompressedImage";
@@ -32,6 +28,11 @@ type ProfileFormState = {
   name: string;
   email: string;
   avatarUrl: string;
+};
+
+type ProfileFormDraft = {
+  profileId: string;
+  values: ProfileFormState;
 };
 
 function getErrorMessage(error: unknown) {
@@ -71,68 +72,19 @@ function formatRequestDate(request: ExchangeRequest) {
 
 export function ProfileManager() {
   const { user, profile, isAuthenticated, isLoading, refreshProfile } = useAuth();
-  const [formState, setFormState] = useState<ProfileFormState>({
-    avatarUrl: "",
-    email: "",
-    name: "",
-  });
-  const [bookCount, setBookCount] = useState(0);
-  const [exchangeRequests, setExchangeRequests] = useState<ExchangeRequest[]>([]);
+  const [formDraft, setFormDraft] = useState<ProfileFormDraft | null>(null);
+  const { books } = useMyBooks(profile?.id);
+  const {
+    error: exchangeRequestsError,
+    isLoading: isExchangeRequestsLoading,
+    requests: exchangeRequests,
+    updateRequestStatus,
+    updatingRequestId,
+  } = useExchangeRequests(profile?.id);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPageLoading, setIsPageLoading] = useState(false);
-  const [updatingRequestId, setUpdatingRequestId] = useState("");
   const [error, setError] = useState("");
   const [avatarFileName, setAvatarFileName] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-
-  useEffect(() => {
-    if (!profile) {
-      return;
-    }
-
-    setFormState({
-      avatarUrl: profile.avatarUrl || "",
-      email: profile.email,
-      name: profile.name,
-    });
-    setAvatarFileName("");
-  }, [profile]);
-
-  useEffect(() => {
-    if (!profile) {
-      return;
-    }
-
-    let isMounted = true;
-
-    async function loadProfileData() {
-      setIsPageLoading(true);
-
-      try {
-        const [books, requests] = await Promise.all([
-          fetchMyBooks(profile.id),
-          fetchUserExchangeRequests(profile.id),
-        ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setBookCount(books.length);
-        setExchangeRequests(requests);
-      } finally {
-        if (isMounted) {
-          setIsPageLoading(false);
-        }
-      }
-    }
-
-    loadProfileData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [profile]);
 
   const incomingRequestsCount = useMemo(() => {
     if (!profile) {
@@ -143,6 +95,26 @@ export function ProfileManager() {
       .length;
   }, [exchangeRequests, profile]);
 
+  const formState =
+    profile && formDraft?.profileId === profile.id
+      ? formDraft.values
+      : {
+          avatarUrl: profile?.avatarUrl || "",
+          email: profile?.email || "",
+          name: profile?.name || "",
+        };
+
+  function updateFormState(nextValues: ProfileFormState) {
+    if (!profile) {
+      return;
+    }
+
+    setFormDraft({
+      profileId: profile.id,
+      values: nextValues,
+    });
+  }
+
   function handleAvatarFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
@@ -152,10 +124,10 @@ export function ProfileManager() {
 
     readCompressedImage(file)
       .then((compressedImage) => {
-        setFormState((currentState) => ({
-          ...currentState,
+        updateFormState({
+          ...formState,
           avatarUrl: compressedImage,
-        }));
+        });
         setAvatarFileName(file.name);
         setError("");
       })
@@ -182,6 +154,8 @@ export function ProfileManager() {
         profile: formState,
       });
       await refreshProfile();
+      setFormDraft(null);
+      setAvatarFileName("");
       setSuccessMessage("Profile updated.");
     } catch (profileError) {
       setError(getErrorMessage(profileError));
@@ -194,20 +168,12 @@ export function ProfileManager() {
     requestId: string,
     status: "accepted" | "rejected",
   ) {
-    setUpdatingRequestId(requestId);
     setError("");
 
     try {
-      await updateExchangeRequestStatus(requestId, status);
-      setExchangeRequests((currentRequests) =>
-        currentRequests.map((request) =>
-          request.id === requestId ? { ...request, status } : request,
-        ),
-      );
+      await updateRequestStatus(requestId, status);
     } catch (requestError) {
       setError(getErrorMessage(requestError));
-    } finally {
-      setUpdatingRequestId("");
     }
   }
 
@@ -249,10 +215,13 @@ export function ProfileManager() {
           <div className="mb-6 flex items-center gap-4">
             <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white bg-zinc-950">
               {formState.avatarUrl ? (
-                <img
+                <Image
                   src={formState.avatarUrl}
                   alt={formState.name}
                   className="size-full object-cover"
+                  height={80}
+                  unoptimized
+                  width={80}
                 />
               ) : (
                 <span className="font-serif text-2xl">
@@ -275,10 +244,10 @@ export function ProfileManager() {
                 id="profile-name"
                 value={formState.name}
                 onChange={(event) =>
-                  setFormState((currentState) => ({
-                    ...currentState,
+                  updateFormState({
+                    ...formState,
                     name: event.target.value,
-                  }))
+                  })
                 }
                 placeholder="Your name"
                 required
@@ -292,10 +261,10 @@ export function ProfileManager() {
                 type="email"
                 value={formState.email}
                 onChange={(event) =>
-                  setFormState((currentState) => ({
-                    ...currentState,
+                  updateFormState({
+                    ...formState,
                     email: event.target.value,
-                  }))
+                  })
                 }
                 placeholder="you@example.com"
                 required
@@ -343,9 +312,9 @@ export function ProfileManager() {
               <BookOpen className="size-5" />
               <span className="text-sm uppercase tracking-[0.2em]">Library</span>
             </div>
-            <p className="font-serif text-5xl">{bookCount}</p>
+            <p className="font-serif text-5xl">{books.length}</p>
             <p className="mt-2 text-sm text-zinc-400">
-              {bookCount === 1 ? "book added" : "books added"}
+              {books.length === 1 ? "book added" : "books added"}
             </p>
           </div>
 
@@ -367,10 +336,14 @@ export function ProfileManager() {
       <section className="mt-10">
         <div className="mb-5 flex items-center justify-between gap-4">
           <h2 className="font-serif text-3xl">Exchange requests</h2>
-          {isPageLoading ? (
+          {isExchangeRequestsLoading ? (
             <span className="text-sm text-zinc-500">Loading...</span>
           ) : null}
         </div>
+
+        {exchangeRequestsError ? (
+          <FieldError>{exchangeRequestsError}</FieldError>
+        ) : null}
 
         {exchangeRequests.length > 0 ? (
           <div className="divide-y divide-zinc-800 border-y border-zinc-800">

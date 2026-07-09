@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { BookDetailsView } from "@/components/books";
 import { useAuth } from "@/features/auth";
-import type { Book } from "@/types";
-import { fetchBookById } from "./booksService";
+import { useBookDetails } from "@/hooks";
 
 type BookDetailsProps = {
   bookId: string;
@@ -12,44 +10,7 @@ type BookDetailsProps = {
 
 export function BookDetails({ bookId }: BookDetailsProps) {
   const { isLoading: isAuthLoading, user } = useAuth();
-  const [book, setBook] = useState<Book | null>(null);
-  const [isBookLoading, setIsBookLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isCurrentRequest = true;
-
-    async function loadBook() {
-      setIsBookLoading(true);
-      setError(null);
-
-      try {
-        const bookData = await fetchBookById(bookId);
-
-        if (!isCurrentRequest) {
-          return;
-        }
-
-        setBook(bookData);
-      } catch {
-        if (!isCurrentRequest) {
-          return;
-        }
-
-        setError("Could not load this book.");
-      } finally {
-        if (isCurrentRequest) {
-          setIsBookLoading(false);
-        }
-      }
-    }
-
-    loadBook();
-
-    return () => {
-      isCurrentRequest = false;
-    };
-  }, [bookId]);
+  const { book, error, isLoading: isBookLoading } = useBookDetails(bookId);
 
   if (isAuthLoading || isBookLoading) {
     return (
