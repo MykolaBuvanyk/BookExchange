@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-type ButtonVariant = "outline" | "solid" | "ghost";
+type ButtonVariant = "outline" | "solid" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -18,11 +18,13 @@ type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
 
 const variantClasses: Record<ButtonVariant, string> = {
   outline:
-    "border border-white bg-transparent text-white hover:bg-white hover:text-black",
+    "border border-white bg-transparent text-white hover:bg-white hover:!text-black",
   solid:
     "border border-white bg-white text-black hover:bg-transparent hover:text-white",
   ghost:
-    "border border-transparent bg-transparent text-white hover:border-white hover:bg-white hover:text-black",
+    "border border-transparent bg-transparent text-white hover:border-white hover:bg-white hover:!text-black",
+  danger:
+    "border border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700 hover:text-white",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

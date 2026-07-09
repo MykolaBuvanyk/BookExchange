@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "@/components/layout";
+import { MyBooksManager } from "@/features/books";
 
 export default function MyBooksPage() {
-  return (
-    <PagePlaceholder
-      title="My books"
-      description="User book management page placeholder."
-    />
-  );
+  return <MyBooksManager />;
 }

@@ -208,6 +208,7 @@ service cloud.firestore {
           "requesterName",
           "requesterEmail",
           "requesterBookIds",
+          "offeredBooks",
           "status",
           "createdAt",
           "updatedAt"
@@ -222,6 +223,7 @@ service cloud.firestore {
           "requesterName",
           "requesterEmail",
           "requesterBookIds",
+          "offeredBooks",
           "status",
           "createdAt",
           "updatedAt"
@@ -238,8 +240,35 @@ service cloud.firestore {
         && isNonEmptyString(request.resource.data.requesterEmail)
         && request.resource.data.requesterBookIds is list
         && request.resource.data.requesterBookIds.size() > 0
+        && request.resource.data.offeredBooks is list
+        && request.resource.data.offeredBooks.size() == request.resource.data.requesterBookIds.size()
         && request.resource.data.status == "pending"
         && hasValidTimestampsOnCreate();
+    }
+
+    function isValidExchangeRequestStatusUpdate() {
+      return hasOnlyAllowedKeys([
+          "id",
+          "bookId",
+          "bookName",
+          "ownerId",
+          "ownerEmail",
+          "requesterId",
+          "requesterName",
+          "requesterEmail",
+          "requesterBookIds",
+          "offeredBooks",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "updatedAt"
+        ])
+        && resource.data.status == "pending"
+        && request.resource.data.status in ["accepted", "rejected"]
+        && hasValidUpdatedAt();
     }
 
     match /users/{userId} {
@@ -273,7 +302,12 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.id == requestId
         && isValidExchangeRequestCreate();
-      allow update: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.ownerId == request.auth.uid
+          && isValidExchangeRequestStatusUpdate()
+        );
       allow delete: if isAdmin();
     }
 

@@ -1,6 +1,12 @@
 import type { Timestamp } from "firebase/firestore";
 
-export type ExchangeRequestStatus = "pending" | "sent" | "failed";
+export type ExchangeRequestStatus = "pending" | "accepted" | "rejected";
+
+export type ExchangeRequestOfferedBook = {
+  id: string;
+  name: string;
+  author: string;
+};
 
 export type ExchangeRequest = {
   id: string;
@@ -12,6 +18,7 @@ export type ExchangeRequest = {
   requesterName: string;
   requesterEmail: string;
   requesterBookIds: string[];
+  offeredBooks: ExchangeRequestOfferedBook[];
   status: ExchangeRequestStatus;
   createdAt: Timestamp;
   updatedAt: Timestamp;

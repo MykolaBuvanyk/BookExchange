@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "@/components/layout";
+import { BooksCatalog } from "@/features/books";
 
 export default function BooksPage() {
-  return (
-    <PagePlaceholder
-      title="Books"
-      description="Public book catalog page placeholder with search, sorting and pagination."
-    />
-  );
+  return <BooksCatalog />;
 }

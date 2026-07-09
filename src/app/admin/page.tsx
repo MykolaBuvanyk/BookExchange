@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "@/components/layout";
+import { AdminPanel } from "@/features/admin";
 
 export default function AdminPage() {
-  return (
-    <PagePlaceholder
-      title="Admin"
-      description="Admin users management page placeholder."
-    />
-  );
+  return <AdminPanel />;
 }

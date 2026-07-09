@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui";
+import { AdminNavLink } from "@/features/auth/AdminNavLink";
+import { UserMenu } from "@/features/auth/UserMenu";
 import { routes } from "@/lib/routes";
 
 export function SiteHeader() {
@@ -15,11 +17,10 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-3">
           <ButtonLink href={routes.books} size="sm">
-            Пошук книжок
+            Find books
           </ButtonLink>
-          <ButtonLink href={routes.login} size="sm">
-            Логін
-          </ButtonLink>
+          <AdminNavLink />
+          <UserMenu />
         </div>
       </nav>
     </header>

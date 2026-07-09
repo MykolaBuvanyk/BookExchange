@@ -1,4 +1,4 @@
-import { PagePlaceholder } from "@/components/layout";
+import { BookDetails } from "@/features/books";
 
 type BookDetailsPageProps = {
   params: Promise<{
@@ -9,10 +9,5 @@ type BookDetailsPageProps = {
 export default async function BookDetailsPage({ params }: BookDetailsPageProps) {
   const { id } = await params;
 
-  return (
-    <PagePlaceholder
-      title="Book details"
-      description={`Book details page placeholder for book id: ${id}.`}
-    />
-  );
+  return <BookDetails bookId={id} />;
 }

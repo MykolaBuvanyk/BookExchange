@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "@/components/layout";
+import { ProfileManager } from "@/features/users";
 
 export default function ProfilePage() {
-  return (
-    <PagePlaceholder
-      title="Profile"
-      description="User profile page placeholder."
-    />
-  );
+  return <ProfileManager />;
 }

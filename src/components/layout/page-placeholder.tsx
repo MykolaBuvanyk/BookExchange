@@ -7,12 +7,7 @@ export function PagePlaceholder({ title, description }: PagePlaceholderProps) {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
       <section className="w-full max-w-xl text-center">
-        <p className="text-sm font-medium uppercase tracking-wide text-zinc-400">
-          BookExchange
-        </p>
-        <h1 className="mt-4 text-4xl font-semibold text-white">
-          {title}
-        </h1>
+        <h1 className="text-4xl font-semibold text-white">{title}</h1>
         <p className="mt-4 text-base leading-7 text-zinc-400">{description}</p>
       </section>
     </main>
