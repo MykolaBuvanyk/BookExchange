@@ -52,7 +52,7 @@ export function BookForm({
             id="bookName"
             value={form.name}
             onChange={onFieldChange("name")}
-            placeholder="The Master and Margarita"
+            placeholder="Kobzar"
           />
         </Field>
 

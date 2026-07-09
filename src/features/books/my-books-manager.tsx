@@ -360,7 +360,7 @@ export function MyBooksManager() {
                   id="bookName"
                   value={form.name}
                   onChange={updateField("name")}
-                  placeholder="The Master and Margarita"
+                  placeholder="Kobzar"
                 />
               </Field>
 
